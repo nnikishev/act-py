@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Генератор актов{% endblock %}
+
+{% block styles %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-left: 4px solid #0d6efd;
+    }
+    .dynamic-row {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        position: relative;
+    }
+    .remove-row {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: #dc3545;
+        cursor: pointer;
+    }
+    .total-box {
+        background: #e8f4fd;
+        border: 1px solid #b6d4fe;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-file-earmark-text"></i> {{ title }}
+            </h2>
+            <div>
+                <a href="{{ url_for('report_list') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Назад к списку
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" id="reportForm" 
+              action="{% if report %}{{ url_for('edit_report', report_id=report.id) }}{% else %}{{ url_for('create_report') }}{% endif %}">
+            
+            <!-- Основная информация -->
+            <div class="form-section">
+                <h4><i class="bi bi-info-circle"></i> Основная информация</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Номер заказ-наряда</label>
+                        <label type="text" name="order_number" class="form-control">
+                               {{ report.order_number if report else '' }}</label>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required">Дата заказ-наряда</label>
+                        <input type="text" name="order_date" class="form-control" 
+                               value="{{ report.order_date if report else now.strftime('%d-%m-%Y %H:%M') }}" required>
+                        <small class="form-text text-muted">Например: 7 августа 2026 г.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Исполнитель и Заказчик -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-section">
+                        <h4><i class="bi bi-person-badge"></i> Исполнитель</h4>
+                        <div class="mb-3">
+                            <label class="form-label required">Наименование исполнителя</label>
+                            <input type="text" name="executor_name" class="form-control" 
+                                   value="{{ report.executor_name if report else 'Box18' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Адрес исполнителя</label>
+                            <textarea name="executor_address" class="form-control" rows="2" required>{{ report.executor_address if report else 'НСО, Ст. Иня-Восточная, ул. Центральная 35/1' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Телефон исполнителя</label>
+                            <input type="text" name="executor_phone" class="form-control" 
+                                   value="{{ report.executor_phone if report else '+7-913-750-8219' }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-section">
+                        <h4><i class="bi bi-person"></i> Заказчик</h4>
+                        <div class="mb-3">
+                            <label class="form-label required">ФИО заказчика</label>
+                            <input type="text" name="customer_name" class="form-control" 
+                                   value="{{ report.customer_name if report else '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Адрес заказчика</label>
+                            <textarea name="customer_address" class="form-control" rows="2">{{ report.customer_address if report else '' }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Телефон заказчика</label>
+                            <input type="text" name="customer_phone" class="form-control" 
+                                   value="{{ report.customer_phone if report else '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Транспортное средство -->
+            <div class="form-section">
+                <h4><i class="bi bi-truck"></i> Транспортное средство</h4>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required">Марка ТС</label>
+                        <input type="text" name="vehicle_make" class="form-control" 
+                               value="{{ report.vehicle_make if report else '' }}" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required">Модель ТС</label>
+                        <input type="text" name="vehicle_model" class="form-control" 
+                               value="{{ report.vehicle_model if report else '' }}" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Регистрационный знак</label>
+                        <input type="text" name="vehicle_registration" class="form-control" 
+                               value="{{ report.vehicle_registration if report else '' }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">VIN/Заводской номер</label>
+                        <input type="text" name="vehicle_vin" class="form-control" 
+                               value="{{ report.vehicle_vin if report else '' }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Год выпуска</label>
+                        <input type="number" name="vehicle_year" class="form-control" 
+                               value="{{ report.vehicle_year if report else '' }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Пробег (км)</label>
+                        <input type="number" name="vehicle_mileage" class="form-control" 
+                               value="{{ report.vehicle_mileage if report else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Причина обращения -->
+            <div class="form-section">
+                <h4><i class="bi bi-exclamation-triangle"></i> Причина обращения</h4>
+                <div class="mb-3">
+                    <textarea name="reason" class="form-control" rows="3" required>{{ report.reason if report else '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Выполненные работы -->
+            <div class="form-section">
+                <h4>
+                    <i class="bi bi-wrench"></i> Выполненные работы
+                    <button type="button" class="btn btn-sm btn-outline-primary float-end" id="addWorkRow">
+                        <i class="bi bi-plus"></i> Добавить работу
+                    </button>
+                </h4>
+                
+                <div id="worksContainer">
+                    {% set works = report.get_works() if report else [] %}
+                    {% for work in works %}
+                    <div class="dynamic-row" id="workRow{{ loop.index0 }}">
+                        {% if loop.index0 > 0 %}
+                        <button type="button" class="btn btn-sm remove-row" onclick="removeRow('workRow{{ loop.index0 }}')">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label">Наименование работы</label>
+                                <input type="text" name="works-{{ loop.index0 }}-name" 
+                                       class="form-control work-name" 
+                                       value="{{ work.name }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Норма времени (час)</label>
+                                <input type="number" step="0.1" name="works-{{ loop.index0 }}-time" 
+                                       class="form-control work-time" 
+                                       value="{{ work.time }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Скидка (%)</label>
+                                <input type="number" step="0.1" name="works-{{ loop.index0 }}-discount" 
+                                       class="form-control work-discount" 
+                                       value="{{ work.discount }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Стоимость нормо-часа (руб.)</label>
+                                <input type="number" step="0.01" name="works-{{ loop.index0 }}-rate" 
+                                       class="form-control work-rate" 
+                                       value="{{ work.rate }}">
+                            </div>
+                            <div class="col-md-1 mb-3">
+                                <label class="form-label">Стоимость (руб.)</label>
+                                <input type="number" step="0.01" name="works-{{ loop.index0 }}-total" 
+                                       class="form-control work-total" 
+                                       value="{{ work.total }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not works %}
+                    <!-- Пустая строка по умолчанию -->
+                    <div class="dynamic-row" id="workRow0">
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label">Наименование работы</label>
+                                <input type="text" name="works-0-name" class="form-control work-name">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Норма времени (час)</label>
+                                <input type="number" step="0.1" name="works-0-time" 
+                                       class="form-control work-time" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Скидка (%)</label>
+                                <input type="number" step="0.1" name="works-0-discount" 
+                                       class="form-control work-discount" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Стоимость нормо-часа (руб.)</label>
+                                <input type="number" step="0.01" name="works-0-rate" 
+                                       class="form-control work-rate" value="0">
+                            </div>
+                            <div class="col-md-1 mb-3">
+                                <label class="form-label">Стоимость (руб.)</label>
+                                <input type="number" step="0.01" name="works-0-total" 
+                                       class="form-control work-total" value="0" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="total-box">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Итого за работы:</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span id="worksTotal">0.00</span> руб.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Запасные части -->
+            <div class="form-section">
+                <h4>
+                    <i class="bi bi-gear"></i> Запасные части
+                    <button type="button" class="btn btn-sm btn-outline-primary float-end" id="addPartRow">
+                        <i class="bi bi-plus"></i> Добавить запчасть
+                    </button>
+                </h4>
+                
+                <div id="partsContainer">
+                    {% set parts = report.get_parts() if report else [] %}
+                    {% for part in parts %}
+                    <div class="dynamic-row" id="partRow{{ loop.index0 }}">
+                        {% if loop.index0 > 0 %}
+                        <button type="button" class="btn btn-sm remove-row" onclick="removeRow('partRow{{ loop.index0 }}')">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Наименование материала</label>
+                                <input type="text" name="parts-{{ loop.index0 }}-name" 
+                                       class="form-control part-name" 
+                                       value="{{ part.name }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Ед. изм.</label>
+                                <input type="text" name="parts-{{ loop.index0 }}-unit" 
+                                       class="form-control part-unit" 
+                                       value="{{ part.unit }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Количество</label>
+                                <input type="number" name="parts-{{ loop.index0 }}-quantity" 
+                                       class="form-control part-quantity" 
+                                       value="{{ part.quantity }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Цена (руб.)</label>
+                                <input type="number" step="0.01" name="parts-{{ loop.index0 }}-price" 
+                                       class="form-control part-price" 
+                                       value="{{ part.price }}">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Сумма (руб.)</label>
+                                <input type="number" step="0.01" name="parts-{{ loop.index0 }}-total" 
+                                       class="form-control part-total" 
+                                       value="{{ part.total }}" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not parts %}
+                    <!-- Пустая строка по умолчанию -->
+                    <div class="dynamic-row" id="partRow0">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Наименование материала</label>
+                                <input type="text" name="parts-0-name" class="form-control part-name">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Ед. изм.</label>
+                                <input type="text" name="parts-0-unit" 
+                                       class="form-control part-unit" value="шт.">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Количество</label>
+                                <input type="number" name="parts-0-quantity" 
+                                       class="form-control part-quantity" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Цена (руб.)</label>
+                                <input type="number" step="0.01" name="parts-0-price" 
+                                       class="form-control part-price" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Сумма (руб.)</label>
+                                <input type="number" step="0.01" name="parts-0-total" 
+                                       class="form-control part-total" value="0" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="total-box">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Итого за запчасти:</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span id="partsTotal">0.00</span> руб.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Гарантийные обязательства -->
+            <div class="form-section">
+                <h4><i class="bi bi-shield-check"></i> Гарантийные обязательства</h4>
+                <div class="mb-3">
+                    <textarea name="warranty_info" class="form-control" rows="4">{{ report.warranty_info if report else 'Гарантия на работу предоставляется сроком на 6 (шесть) месяцев или 10000 км пробега автомобиля. Гарантия на запчасти предоставляется согласно гарантии производителя.' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Итоговая сумма -->
+            <div class="card border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator"></i> Итоговая сумма
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6>Работы</h6>
+                                <h3 class="text-success" id="finalWorksTotal">{{ "%.2f"|format(report.total_amount) if report else '0.00' }}</h3>
+                                <small class="text-muted">руб.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6>Запчасти</h6>
+                                <h3 class="text-primary" id="finalPartsTotal">0.00</h3>
+                                <small class="text-muted">руб.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6>Общая сумма</h6>
+                                <h2 class="text-danger" id="finalTotal">{{ "%.2f"|format(report.total_amount) if report else '0.00' }}</h2>
+                                <small class="text-muted">руб.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="d-flex justify-content-between mb-5">
+                <div>
+                    <button type="submit" name="submit" class="btn btn-lg btn-outline-secondary">
+                        Сохранить черновик
+                    </button>
+                    <button type="submit" name="preview" class="btn btn-lg btn-outline-primary">
+                        Предпросмотр
+                    </button>
+                </div>
+                <div>
+                    <button type="submit" name="generate_pdf" class="btn btn-lg btn-success">
+                        Сгенерировать PDF
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let workRowCount = {{ report.get_works()|length if report else 1 }};
+    let partRowCount = {{ report.get_parts()|length if report else 1 }};
+
+    // Добавление строки работы
+    $('#addWorkRow').click(function() {
+        const index = workRowCount;
+        const newRow = `
+            <div class="dynamic-row" id="workRow${index}">
+                <button type="button" class="btn btn-sm remove-row" onclick="removeRow('workRow${index}')">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+                
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label">Наименование работы</label>
+                        <input type="text" name="works-${index}-name" 
+                               class="form-control work-name">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Норма времени (час)</label>
+                        <input type="number" step="0.1" name="works-${index}-time" 
+                               class="form-control work-time" value="0">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Скидка (%)</label>
+                        <input type="number" step="0.1" name="works-${index}-discount" 
+                               class="form-control work-discount" value="0">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Стоимость нормо-часа (руб.)</label>
+                        <input type="number" step="0.01" name="works-${index}-rate" 
+                               class="form-control work-rate" value="0">
+                    </div>
+                    <div class="col-md-1 mb-3">
+                        <label class="form-label">Стоимость (руб.)</label>
+                        <input type="number" step="0.01" name="works-${index}-total" 
+                               class="form-control work-total" value="0" readonly>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#worksContainer').append(newRow);
+        workRowCount++;
+        attachWorkCalculations();
+    });
+
+    // Добавление строки запчасти
+    $('#addPartRow').click(function() {
+        const index = partRowCount;
+        const newRow = `
+            <div class="dynamic-row" id="partRow${index}">
+                <button type="button" class="btn btn-sm remove-row" onclick="removeRow('partRow${index}')">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Наименование материала</label>
+                        <input type="text" name="parts-${index}-name" 
+                               class="form-control part-name">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Ед. изм.</label>
+                        <input type="text" name="parts-${index}-unit" 
+                               class="form-control part-unit" value="шт.">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Количество</label>
+                        <input type="number" name="parts-${index}-quantity" 
+                               class="form-control part-quantity" value="0">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Цена (руб.)</label>
+                        <input type="number" step="0.01" name="parts-${index}-price" 
+                               class="form-control part-price" value="0">
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Сумма (руб.)</label>
+                        <input type="number" step="0.01" name="parts-${index}-total" 
+                               class="form-control part-total" value="0" readonly>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#partsContainer').append(newRow);
+        partRowCount++;
+        attachPartCalculations();
+    });
+
+    // Удаление строки
+    function removeRow(rowId) {
+        $('#' + rowId).remove();
+        calculateTotals();
+    }
+
+    // Привязка расчетов для работ
+    function attachWorkCalculations() {
+        $('.work-time, .work-discount, .work-rate').off('input').on('input', function() {
+            const row = $(this).closest('.dynamic-row');
+            calculateWorkTotal(row);
+            calculateTotals();
+        });
+    }
+
+    // Привязка расчетов для запчастей
+    function attachPartCalculations() {
+        $('.part-quantity, .part-price').off('input').on('input', function() {
+            const row = $(this).closest('.dynamic-row');
+            calculatePartTotal(row);
+            calculateTotals();
+        });
+    }
+
+    // Расчет суммы для работы
+    function calculateWorkTotal(row) {
+        const time = parseFloat(row.find('.work-time').val()) || 0;
+        const discount = parseFloat(row.find('.work-discount').val()) || 0;
+        const rate = parseFloat(row.find('.work-rate').val()) || 0;
+        
+        let total = time * rate;
+        if (discount > 0) {
+            total = total * (1 - discount / 100);
+        }
+        
+        row.find('.work-total').val(total.toFixed(2));
+    }
+
+    // Расчет суммы для запчасти
+    function calculatePartTotal(row) {
+        const quantity = parseFloat(row.find('.part-quantity').val()) || 0;
+        const price = parseFloat(row.find('.part-price').val()) || 0;
+        const total = quantity * price;
+        
+        row.find('.part-total').val(total.toFixed(2));
+    }
+
+    // Расчет итоговых сумм
+    function calculateTotals() {
+        let worksTotal = 0;
+        let partsTotal = 0;
+        
+        // Сумма работ
+        $('.work-total').each(function() {
+            worksTotal += parseFloat($(this).val()) || 0;
+        });
+        
+        // Сумма запчастей
+        $('.part-total').each(function() {
+            partsTotal += parseFloat($(this).val()) || 0;
+        });
+        
+        // Обновление отображения
+        $('#worksTotal').text(worksTotal.toFixed(2));
+        $('#partsTotal').text(partsTotal.toFixed(2));
+        $('#finalWorksTotal').text(worksTotal.toFixed(2));
+        $('#finalPartsTotal').text(partsTotal.toFixed(2));
+        $('#finalTotal').text((worksTotal + partsTotal).toFixed(2));
+    }
+
+    // Инициализация
+    $(document).ready(function() {
+        attachWorkCalculations();
+        attachPartCalculations();
+        calculateTotals();
+        
+        // Валидация формы
+        $('#reportForm').on('submit', function(e) {
+            // Проверяем обязательные поля
+            let isValid = true;
+            const requiredFields = $(this).find('[required]');
+            
+            requiredFields.each(function() {
+                if (!$(this).val().trim()) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Пожалуйста, заполните все обязательные поля (помечены *)');
+                return false;
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

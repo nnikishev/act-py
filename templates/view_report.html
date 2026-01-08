@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}Акт №{{ report.order_number }} - Просмотр{% endblock %}
+
+{% block styles %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .report-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .report-section h4 {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .info-label {
+        font-weight: bold;
+        color: #7f8c8d;
+    }
+    .table-report {
+        font-size: 0.9rem;
+    }
+    .table-report th {
+        background-color: #34495e;
+        color: white;
+        border: none;
+    }
+    .table-report tbody tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    .total-box {
+        background: #e8f4fd;
+        border-left: 4px solid #3498db;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    .warranty-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+    .action-buttons {
+        position: sticky;
+        top: 20px;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        <!-- Заголовок отчета -->
+        <div class="report-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-5 mb-2">
+                        <i class="bi bi-file-earmark-text"></i> Акт выполненных работ
+                    </h1>
+                    <p class="lead mb-0">№ {{ report.order_number }} от {{ report.order_date }}</p>
+                </div>
+                <div class="text-end">
+                    <span class="status-badge bg-light text-dark">
+                        {% if report.status == 'generated' %}
+                            <i class="bi bi-check-circle text-success"></i> PDF готов
+                        {% elif report.status == 'draft' %}
+                            <i class="bi bi-pencil text-warning"></i> Черновик
+                        {% else %}
+                            {{ report.status }}
+                        {% endif %}
+                    </span>
+                    <br>
+                    <small class="opacity-75">
+                        Создан: {{ report.created_at.strftime('%d.%m.%Y %H:%M') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Исполнитель и Заказчик -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="report-section h-100">
+                    <h4><i class="bi bi-person-badge"></i> Исполнитель</h4>
+                    <p class="mb-1"><strong>{{ report.executor_name }}</strong></p>
+                    <p class="mb-1 text-muted"><small>Адрес: {{ report.executor_address }}</small></p>
+                    <p class="mb-0 text-muted"><small>Телефон: {{ report.executor_phone }}</small></p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="report-section h-100">
+                    <h4><i class="bi bi-person"></i> Заказчик</h4>
+                    <p class="mb-1"><strong>{{ report.customer_name }}</strong></p>
+                    <p class="mb-1 text-muted"><small>Адрес: {{ report.customer_address }}</small></p>
+                    <p class="mb-0 text-muted"><small>Телефон: {{ report.customer_phone }}</small></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Транспортное средство -->
+        <div class="report-section">
+            <h4><i class="bi bi-truck"></i> Транспортное средство</h4>
+            <div class="row">
+                <div class="col-md-2">
+                    <p class="mb-1"><span class="info-label">Марка:</span></p>
+                    <p class="mb-1"><span class="info-label">Модель:</span></p>
+                    <p class="mb-1"><span class="info-label">Рег. знак:</span></p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>{{ report.vehicle_make }}</strong></p>
+                    <p class="mb-1"><strong>{{ report.vehicle_model }}</strong></p>
+                    <p class="mb-1"><strong>{{ report.vehicle_registration or '-' }}</strong></p>
+                </div>
+                <div class="col-md-2">
+                    <p class="mb-1"><span class="info-label">VIN:</span></p>
+                    <p class="mb-1"><span class="info-label">Год выпуска:</span></p>
+                    <p class="mb-1"><span class="info-label">Пробег:</span></p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>{{ report.vehicle_vin or '-' }}</strong></p>
+                    <p class="mb-1"><strong>{{ report.vehicle_year or '-' }}</strong></p>
+                    <p class="mb-1"><strong>{{ report.vehicle_mileage or '-' }} км</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Причина обращения -->
+        <div class="report-section">
+            <h4><i class="bi bi-exclamation-triangle"></i> Причина обращения</h4>
+            <p class="mb-0">{{ report.reason }}</p>
+        </div>
+
+        <!-- Выполненные работы -->
+        <div class="report-section">
+            <h4><i class="bi bi-wrench"></i> Выполненные работы</h4>
+            <div class="table-responsive">
+                <table class="table table-report">
+                    <thead>
+                        <tr>
+                            <th width="5%">№</th>
+                            <th width="45%">Наименование работ</th>
+                            <th width="10%">Норма времени, час</th>
+                            <th width="10%">Скидка, %</th>
+                            <th width="15%">Стоимость нормо-часа, руб.</th>
+                            <th width="15%">Стоимость работ, руб.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for work in works %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ work.name }}</td>
+                            <td class="text-end">{{ work.time }}</td>
+                            <td class="text-end">{{ work.discount if work.discount != '0' else '-' }}</td>
+                            <td class="text-end">{{ work.rate }}</td>
+                            <td class="text-end">{{ work.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-active">
+                            <td colspan="5" class="text-end"><strong>Итого за работы:</strong></td>
+                            <td class="text-end"><strong>{{ "%.2f"|format(works|sum(attribute='total')|float) }} руб.</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Запасные части -->
+        <div class="report-section">
+            <h4><i class="bi bi-gear"></i> Запасные части</h4>
+            <div class="table-responsive">
+                <table class="table table-report">
+                    <thead>
+                        <tr>
+                            <th width="5%">№</th>
+                            <th width="45%">Наименование материалов</th>
+                            <th width="10%">Ед. изм.</th>
+                            <th width="10%">Кол-во</th>
+                            <th width="15%">Цена, руб.</th>
+                            <th width="15%">Сумма, руб.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ part.name }}</td>
+                            <td>{{ part.unit }}</td>
+                            <td class="text-end">{{ part.quantity }}</td>
+                            <td class="text-end">{{ part.price }}</td>
+                            <td class="text-end">{{ part.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-active">
+                            <td colspan="5" class="text-end"><strong>Итого за запчасти:</strong></td>
+                            <td class="text-end"><strong>{{ "%.2f"|format(parts|sum(attribute='total')|float) }} руб.</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Стоимость -->
+        <div class="report-section">
+            <h4><i class="bi bi-calculator"></i> Стоимость выполненного заказа</h4>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="total-box">
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                Всего без НДС, руб.:
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>{{ "%.2f"|format(report.total_amount) }}</strong>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                Ставка НДС, %: 
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>22</strong>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                Сумма НДС, руб.:
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>{{ "%.2f"|format(report.total_amount * 0.22) }}</strong>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                Общая стоимость, руб.:
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>{{ "%.2f"|format(report.total_amount) }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-success h-100 d-flex flex-column justify-content-center">
+                        <h5 class="text-center mb-0">
+                            {% set rubles = report.total_amount|int %}
+                            {% set kopecks = ((report.total_amount - rubles) * 100)|round|int %}
+                            {{ rubles }} руб. {{ "%02d"|format(kopecks) }} коп.
+                        </h5>
+                        <p class="text-center mb-0"><small>Без НДС</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Гарантия -->
+        <div class="report-section">
+            <h4><i class="bi bi-shield-check"></i> Гарантийные обязательства</h4>
+            <div class="warranty-box">
+                {{ report.warranty_info|replace('\n', '<br>')|safe }}
+            </div>
+        </div>
+
+        <!-- Подписи -->
+        <div class="report-section">
+            <h4><i class="bi bi-pen"></i> Подписи сторон</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="text-center">
+                        <div class="signature-line mb-2" style="border-bottom: 1px solid #333; width: 80%; margin: 0 auto; padding-top: 40px;"></div>
+                        <p class="mb-1"><strong>Исполнитель</strong></p>
+                        <p class="text-muted"><small>{{ report.executor_name }}</small></p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-center">
+                        <div class="signature-line mb-2" style="border-bottom: 1px solid #333; width: 80%; margin: 0 auto; padding-top: 40px;"></div>
+                        <p class="mb-1"><strong>Заказчик</strong></p>
+                        <p class="text-muted"><small>{{ report.customer_name }}</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая панель с действиями -->
+    <div class="col-lg-3">
+        <div class="action-buttons">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i> Действия
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('edit_report', report_id=report.id) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Редактировать
+                        </a>
+                        
+                        {% if report.pdf_path %}
+                        <a href="{{ url_for('download_pdf', report_id=report.id) }}" 
+                           class="btn btn-success">
+                            <i class="bi bi-file-pdf"></i> Скачать PDF
+                        </a>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('regenerate_pdf', report_id=report.id) }}">
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="bi bi-file-earmark-plus"></i> Сгенерировать PDF
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('preview_report', report_id=report.id) }}" 
+                           class="btn btn-info" target="_blank">
+                            <i class="bi bi-eye"></i> Предпросмотр
+                        </a>
+                        
+                        <a href="{{ url_for('report_list') }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> К списку
+                        </a>
+                        
+                        <!-- Кнопка удаления с подтверждением -->
+                        <button type="button" class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                    </div>
+                    
+                    <!-- Информация -->
+                    <hr>
+                    <div class="small">
+                        <p class="mb-1"><strong>Информация:</strong></p>
+                        <p class="mb-1">ID: {{ report.id }}</p>
+                        <p class="mb-1">Статус: 
+                            {% if report.status == 'generated' %}
+                                <span class="badge bg-success">PDF готов</span>
+                            {% elif report.status == 'draft' %}
+                                <span class="badge bg-warning">Черновик</span>
+                            {% endif %}
+                        </p>
+                        {% if report.generated_at %}
+                        <p class="mb-1">PDF создан: {{ report.generated_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                        {% endif %}
+                        {% if report.pdf_path %}
+                        <p class="mb-1">Файл: {{ report.pdf_path.split('/')[-1] }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Подтверждение удаления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить акт №{{ report.order_number }}?</p>
+                <p class="text-danger"><small>Это действие нельзя отменить. Будет удален отчет и PDF файл.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="POST" action="{{ url_for('delete_report', report_id=report.id) }}">
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

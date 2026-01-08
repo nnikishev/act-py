@@ -1,0 +1,33 @@
+<div class="dynamic-row" id="workRow{{ index }}">
+    <button type="button" class="btn btn-sm remove-row" onclick="removeRow('workRow{{ index }}')">
+        <i class="bi bi-x-circle"></i>
+    </button>
+    
+    <div class="row">
+        <div class="col-md-5 mb-3">
+            <label class="form-label">Наименование работы*</label>
+            <input type="text" name="works-{{ index }}-name" 
+                   class="form-control work-name">
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Норма времени (час)*</label>
+            <input type="number" step="0.1" name="works-{{ index }}-time" 
+                   class="form-control work-time">
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Скидка (%)</label>
+            <input type="number" step="0.1" name="works-{{ index }}-discount" 
+                   class="form-control work-discount" value="0">
+        </div>
+        <div class="col-md-2 mb-3">
+            <label class="form-label">Стоимость нормо-часа (руб.)*</label>
+            <input type="number" step="0.01" name="works-{{ index }}-rate" 
+                   class="form-control work-rate">
+        </div>
+        <div class="col-md-1 mb-3">
+            <label class="form-label">Стоимость (руб.)*</label>
+            <input type="number" step="0.01" name="works-{{ index }}-total" 
+                   class="form-control work-total" readonly>
+        </div>
+    </div>
+</div>

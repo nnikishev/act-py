@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Предпросмотр акта №{{ report.order_number }}{% endblock %}
+
+{% block styles %}
+<style>
+    .preview-container {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 30px;
+        margin: 20px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .preview-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #0d6efd;
+    }
+    
+    .preview-actions {
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .preview-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    
+    .print-only {
+        display: none;
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .print-only {
+            display: block !important;
+        }
+        .preview-container {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Панель действий -->
+        <div class="preview-actions no-print">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        <i class="bi bi-eye"></i> Предпросмотр акта №{{ report.order_number }}
+                    </h4>
+                </div>
+                <div class="btn-group">
+                    <a href="{{ url_for('edit_report', report_id=report.id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Редактировать
+                    </a>
+                    <a href="{{ url_for('view_report', report_id=report.id) }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Назад
+                    </a>
+                    <button onclick="window.print()" class="btn btn-outline-success">
+                        <i class="bi bi-printer"></i> Печать
+                    </button>
+                    {% if report.pdf_path %}
+                    <a href="{{ url_for('download_pdf', report_id=report.id) }}" 
+                       class="btn btn-success">
+                        <i class="bi bi-file-pdf"></i> Скачать PDF
+                    </a>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('regenerate_pdf', report_id=report.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-file-earmark-plus"></i> Сгенерировать PDF
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i> Это HTML версия для предварительного просмотра. 
+                Для печати используйте кнопку "Печать" или сгенерируйте PDF.
+            </div>
+        </div>
+
+        <!-- Контейнер предпросмотра -->
+        <div class="preview-container">
+            {{ html_content|safe }}
+        </div>
+
+        <!-- Информация о документе -->
+        <div class="card mt-3 no-print">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-info-circle"></i> Информация о документе
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Номер заказа:</strong> {{ report.order_number }}</p>
+                        <p class="mb-1"><strong>Дата создания:</strong> {{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                        <p class="mb-1"><strong>Статус:</strong> 
+                            {% if report.status == 'generated' %}
+                                <span class="badge bg-success">PDF готов</span>
+                            {% elif report.status == 'draft' %}
+                                <span class="badge bg-warning">Черновик</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Общая сумма:</strong> {{ "%.2f"|format(report.total_amount) }} руб.</p>
+                        <p class="mb-1"><strong>Работы:</strong> {{ report.get_works()|length }} позиций</p>
+                        <p class="mb-1"><strong>Запчасти:</strong> {{ report.get_parts()|length }} позиций</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Автоматический расчет высоты для печати
+    function adjustForPrint() {
+        // Добавляем классы для печати
+        $('table').addClass('table table-bordered preview-table');
+        $('.text-right').css('text-align', 'right');
+        $('.text-center').css('text-align', 'center');
+    }
+    
+    $(document).ready(function() {
+        adjustForPrint();
+        
+        // Обработка печати
+        $('.btn-print').click(function() {
+            // Показываем предупреждение перед печатью
+            if (confirm('Настройте параметры печати:\n1. Размер бумаги: A4\n2. Поля: Стандартные\n3. Масштаб: 100%\n4. Печатать фон: Включено')) {
+                window.print();
+            }
+        });
+        
+        // Автоматическое обновление расчетов
+        $('[name*="time"], [name*="rate"], [name*="discount"]').on('input', function() {
+            const row = $(this).closest('.dynamic-row');
+            const time = parseFloat(row.find('[name*="time"]').val()) || 0;
+            const rate = parseFloat(row.find('[name*="rate"]').val()) || 0;
+            const discount = parseFloat(row.find('[name*="discount"]').val()) || 0;
+            
+            let total = time * rate;
+            if (discount > 0) {
+                total = total * (1 - discount / 100);
+            }
+            
+            row.find('[name*="total"]').val(total.toFixed(2));
+        });
+    });
+</script>
+{% endblock %}

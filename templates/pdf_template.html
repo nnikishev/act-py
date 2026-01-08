@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Акт выполненных работ №{{ report.order_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #000;
+        }
+        
+        .header h1 {
+            font-size: 14pt;
+            margin: 0 0 5px 0;
+        }
+        
+        .header .subtitle {
+            font-size: 11pt;
+            margin: 0;
+        }
+        
+        .party-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .party-column {
+            width: 48%;
+        }
+        
+        .party-column h3 {
+            font-size: 10pt;
+            margin: 0 0 10px 0;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .party-details p {
+            margin: 5px 0;
+        }
+        
+        .table-section {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+        
+        .table-section h3 {
+            font-size: 10pt;
+            margin: 0 0 10px 0;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9pt;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .total-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #000;
+            background-color: #f9f9f9;
+        }
+        
+        .total-table {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .total-table td {
+            border: none;
+            padding: 3px 0;
+        }
+        
+        .total-table td:last-child {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .total-amount {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+        }
+        
+        .warranty-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #000;
+            background-color: #fff3cd;
+        }
+        
+        .signatures {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+        }
+        
+        .signature-block {
+            width: 45%;
+            padding-top: 40px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            text-align: center;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .no-print {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Заголовок -->
+        <div class="header">
+            <h1>АКТ ВЫПОЛНЕННЫХ РАБОТ</h1>
+            <p class="subtitle">к заказ-наряду № {{ report.order_number }} от «{{ report.order_date }}»</p>
+        </div>
+
+        <!-- Исполнитель и Заказчик -->
+        <div class="party-info">
+            <div class="party-column">
+                <h3>Исполнитель:</h3>
+                <div class="party-details">
+                    <p><strong>{{ report.executor_name }}</strong></p>
+                    <p>Адрес: {{ report.executor_address }}</p>
+                    <p>Телефон: {{ report.executor_phone }}</p>
+                </div>
+            </div>
+            
+            <div class="party-column">
+                <h3>Заказчик:</h3>
+                <div class="party-details">
+                    <p><strong>{{ report.customer_name }}</strong></p>
+                    <p>Адрес: {{ report.customer_address }}</p>
+                    <p>Телефон: {{ report.customer_phone }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Транспортное средство -->
+        <div class="table-section">
+            <h3>Транспортное средство</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Марка ТС</th>
+                        <th>Модель</th>
+                        <th>Регистрационный знак</th>
+                        <th>VIN / Заводской номер</th>
+                        <th>Год выпуска</th>
+                        <th>Пробег</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ vehicle.make }}</td>
+                        <td>{{ vehicle.model }}</td>
+                        <td>{{ vehicle.registration }}</td>
+                        <td>{{ vehicle.vin }}</td>
+                        <td>{{ vehicle.year }}</td>
+                        <td>{{ vehicle.mileage }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Причина обращения -->
+        <div class="table-section">
+            <h3>Причина обращения</h3>
+            <p>{{ report.reason }}</p>
+        </div>
+
+        <!-- Выполненные работы -->
+        <div class="table-section">
+            <h3>Выполненные работы</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%">№</th>
+                        <th width="45%">Наименование работ</th>
+                        <th width="10%">Норма времени, час</th>
+                        <th width="10%">Скидка, %</th>
+                        <th width="15%">Стоимость нормо-часа, руб.</th>
+                        <th width="15%">Стоимость работ, руб.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for work in works %}
+                    <tr>
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>{{ work.name }}</td>
+                        <td class="text-right">{{ work.time|format_currency }}</td>
+                        <td class="text-right">{{ work.discount if work.discount != 0 else '-' }}</td>
+                        <td class="text-right">{{ work.rate|format_currency }}</td>
+                        <td class="text-right">{{ work.total|format_currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5" class="text-right"><strong>Итого за работы:</strong></td>
+                        <td class="text-right"><strong>{{ works_total|format_currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Запасные части -->
+        <div class="table-section">
+            <h3>Запасные части</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%">№</th>
+                        <th width="45%">Наименование использованных материалов</th>
+                        <th width="10%">Ед. изм.</th>
+                        <th width="10%">Кол-во</th>
+                        <th width="15%">Цена, руб.</th>
+                        <th width="15%">Сумма, руб.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>{{ part.name }}</td>
+                        <td>{{ part.unit }}</td>
+                        <td class="text-right">{{ part.quantity }}</td>
+                        <td class="text-right">{{ part.price|format_currency }}</td>
+                        <td class="text-right">{{ part.total|format_currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5" class="text-right"><strong>Итого за запчасти:</strong></td>
+                        <td class="text-right"><strong>{{ parts_total|format_currency }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Стоимость выполненного заказа -->
+        <div class="table-section">
+            <h3>Стоимость выполненного заказа</h3>
+            <div class="total-section">
+                <table class="total-table">
+                    <tr>
+                        <td>Всего без НДС, руб.</td>
+                        <td>{{ total_amount|format_currency }}</td>
+                    </tr>
+                    <tr>
+                        <td>Ставка НДС, %</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Сумма НДС, руб.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Общая стоимость, руб.</strong></td>
+                        <td><strong>{{ total_amount|format_currency }}</strong></td>
+                    </tr>
+                </table>
+                
+                <div class="total-amount">
+                    Общая сумма по Заказ-наряду: {{ rubles }} руб. {{ "%02d"|format(kopecks) }} копеек. Без НДС.
+                </div>
+            </div>
+        </div>
+
+        <!-- Гарантийные обязательства -->
+        <div class="warranty-section">
+            <h3>Гарантийные обязательства:</h3>
+            <p>{{ report.warranty_info|replace('\n', '<br>')|safe }}</p>
+        </div>
+
+        <!-- Подписи -->
+        <div class="signatures">
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <p>Исполнитель</p>
+                <p>{{ report.executor_name }}</p>
+            </div>
+            
+            <div class="signature-block">
+                <div class="signature-line"></div>
+                <p>Заказчик</p>
+                <p>{{ report.customer_name }}</p>
+            </div>
+        </div>
+
+        <!-- Футер -->
+        <div class="footer">
+            <p>Документ сгенерирован: {{ generation_date }}</p>
+        </div>
+    </div>
+</body>
+</html>
