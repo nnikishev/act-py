@@ -99,3 +99,78 @@ class Report(db.Model):
             'year': self.vehicle_year,
             'mileage': self.vehicle_mileage
         }
+ 
+    
+class Customer(db.Model):
+    """Модель клиента"""
+    __tablename__ = 'customers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Основная информация
+    last_name = db.Column(db.String(100), nullable=False, index=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    middle_name = db.Column(db.String(100))
+    
+    # Контактная информация
+    phone = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(200))
+    address = db.Column(db.String(300))
+    
+    # Дополнительная информация
+    driver_license = db.Column(db.String(50), index=True)
+    
+    # Автомобили (храним как JSON)
+    vehicles_data = db.Column(db.Text, default='[]')
+    
+    # Статус и метаданные
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(20), default='active', index=True)  # active, inactive
+    
+    # Даты
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Customer {self.last_name} {self.first_name}>'
+    
+    def get_full_name(self):
+        """Полное имя клиента"""
+        parts = [self.last_name, self.first_name]
+        if self.middle_name:
+            parts.append(self.middle_name)
+        return ' '.join(parts)
+    
+    def get_short_name(self):
+        """Короткое имя"""
+        return f"{self.last_name} {self.first_name[0]}." + (f" {self.middle_name[0]}." if self.middle_name else "")
+    
+    def get_vehicles(self):
+        """Получение списка автомобилей из JSON"""
+        if self.vehicles_data:
+            return json.loads(self.vehicles_data)
+        return []
+    
+    def add_vehicle(self, vehicle_data):
+        """Добавление автомобиля"""
+        vehicles = self.get_vehicles()
+        vehicles.append(vehicle_data)
+        self.vehicles_data = json.dumps(vehicles, ensure_ascii=False)
+    
+    def to_dict(self):
+        """Конвертация в словарь"""
+        return {
+            'id': self.id,
+            'last_name': self.last_name,
+            'first_name': self.first_name,
+            'middle_name': self.middle_name,
+            'full_name': self.get_full_name(),
+            'phone': self.phone,
+            'email': self.email,
+            'address': self.address,
+            'driver_license': self.driver_license,
+            'vehicles': self.get_vehicles(),
+            'notes': self.notes,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }

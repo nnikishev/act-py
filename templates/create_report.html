@@ -37,6 +37,57 @@
         content: " *";
         color: #dc3545;
     }
+    
+    /* Стили для автодополнения */
+    .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+    }
+    
+    .autocomplete-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+    
+    .autocomplete-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    
+    .customer-info {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .vehicles-count {
+        font-size: 0.8rem;
+        color: #198754;
+    }
+    
+    .autocomplete-wrapper {
+        position: relative;
+    }
+    
+    .field-readonly {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
 </style>
 {% endblock %}
 
@@ -99,19 +150,69 @@
                 <div class="col-md-6">
                     <div class="form-section">
                         <h4><i class="bi bi-person"></i> Заказчик</h4>
-                        <div class="mb-3">
-                            <label class="form-label required">ФИО заказчика</label>
-                            <input type="text" name="customer_name" class="form-control" 
-                                   value="{{ report.customer_name if report else '' }}">
+                        
+                        <!-- Поля для ручного ввода -->
+                        <div id="customerManualFields">
+                            <div class="mb-3">
+                                <label class="form-label required">ФИО заказчика</label>
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" 
+                                           name="customer_name" 
+                                           id="customer_name" 
+                                           class="form-control customer-search-field"
+                                           placeholder="Начните вводить фамилию"
+                                           value="{{ report.customer_name if report else '' }}"
+                                           autocomplete="off"
+                                           required>
+                                    <div id="customerNameDropdown" class="autocomplete-dropdown"></div>
+                                </div>
+                                <small class="form-text text-muted">Начните вводить фамилию для поиска клиента</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label required">Телефон заказчика</label>
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" 
+                                           name="customer_phone" 
+                                           id="customer_phone" 
+                                           class="form-control customer-search-field"
+                                           placeholder="Начните вводить телефон"
+                                           value="{{ report.customer_phone if report else '' }}"
+                                           autocomplete="off"
+                                           required>
+                                    <div id="customerPhoneDropdown" class="autocomplete-dropdown"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label required">Адрес заказчика</label>
+                                <textarea name="customer_address" 
+                                          id="customer_address" 
+                                          class="form-control" 
+                                          rows="2"
+                                          required>{{ report.customer_address if report else '' }}</textarea>
+                            </div>
                         </div>
+                        
+                        <!-- Скрытые поля для данных клиента -->
+                        <input type="hidden" id="selectedCustomerId" name="customer_id" value="">
+                        <input type="hidden" id="selectedCustomerData" value="">
+                        
+                        <!-- Кнопка для выбора автомобиля -->
                         <div class="mb-3">
-                            <label class="form-label required">Адрес заказчика</label>
-                            <textarea name="customer_address" class="form-control" rows="2">{{ report.customer_address if report else '' }}</textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label required">Телефон заказчика</label>
-                            <input type="text" name="customer_phone" class="form-control" 
-                                   value="{{ report.customer_phone if report else '' }}">
+                            <button type="button" 
+                                    id="selectCustomerVehicle" 
+                                    class="btn btn-sm btn-outline-primary"
+                                    style="display: none;"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#vehicleSelectModal">
+                                <i class="bi bi-car-front"></i> Выбрать авто клиента
+                            </button>
+                            
+                            <button type="button" 
+                                    id="clearCustomerSelection" 
+                                    class="btn btn-sm btn-outline-secondary"
+                                    style="display: none;">
+                                <i class="bi bi-x-circle"></i> Очистить выбор клиента
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -123,34 +224,46 @@
                 <div class="row">
                     <div class="col-md-3 mb-3">
                         <label class="form-label required">Марка ТС</label>
-                        <input type="text" name="vehicle_make" class="form-control" 
+                        <input type="text" name="vehicle_make" 
+                               id="vehicle_make"
+                               class="form-control" 
                                value="{{ report.vehicle_make if report else '' }}" required>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label required">Модель ТС</label>
-                        <input type="text" name="vehicle_model" class="form-control" 
+                        <input type="text" name="vehicle_model" 
+                               id="vehicle_model"
+                               class="form-control" 
                                value="{{ report.vehicle_model if report else '' }}" required>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Регистрационный знак</label>
-                        <input type="text" name="vehicle_registration" class="form-control" 
+                        <input type="text" name="vehicle_registration" 
+                               id="vehicle_registration"
+                               class="form-control" 
                                value="{{ report.vehicle_registration if report else '' }}">
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">VIN/Заводской номер</label>
-                        <input type="text" name="vehicle_vin" class="form-control" 
+                        <input type="text" name="vehicle_vin" 
+                               id="vehicle_vin"
+                               class="form-control" 
                                value="{{ report.vehicle_vin if report else '' }}">
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Год выпуска</label>
-                        <input type="number" name="vehicle_year" class="form-control" 
+                        <input type="number" name="vehicle_year" 
+                               id="vehicle_year"
+                               class="form-control" 
                                value="{{ report.vehicle_year if report else '' }}">
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Пробег (км)</label>
-                        <input type="number" name="vehicle_mileage" class="form-control" 
+                        <input type="number" name="vehicle_mileage" 
+                               id="vehicle_mileage"
+                               class="form-control" 
                                value="{{ report.vehicle_mileage if report else '' }}">
                     </div>
                 </div>
@@ -408,9 +521,9 @@
                     <button type="submit" name="submit" class="btn btn-lg btn-outline-secondary">
                         Сохранить черновик
                     </button>
-                    <button type="submit" name="preview" class="btn btn-lg btn-outline-primary">
+                    <!-- <button type="submit" name="preview" class="btn btn-lg btn-outline-primary">
                         Предпросмотр
-                    </button>
+                    </button> -->
                 </div>
                 <div>
                     <button type="submit" name="generate_pdf" class="btn btn-lg btn-success">
@@ -421,173 +534,605 @@
         </form>
     </div>
 </div>
+
+<!-- Модальное окно выбора автомобиля -->
+<div class="modal fade" id="vehicleSelectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Выберите автомобиль клиента</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="customerVehiclesList" class="list-group">
+                    <!-- Автомобили будут загружены через JavaScript -->
+                </div>
+                <div id="noVehiclesMessage" class="text-center py-4" style="display: none;">
+                    <i class="bi bi-car-front display-4 text-muted"></i>
+                    <h5 class="mt-3">У клиента нет автомобилей</h5>
+                    <p>Добавьте автомобиль в карточке клиента</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     let workRowCount = {{ report.get_works()|length if report else 1 }};
     let partRowCount = {{ report.get_parts()|length if report else 1 }};
+    let selectedCustomer = null;
+    let searchTimer = null;
 
-    // Добавление строки работы
-    $('#addWorkRow').click(function() {
-        const index = workRowCount;
-        const newRow = `
-            <div class="dynamic-row" id="workRow${index}">
-                <button type="button" class="btn btn-sm remove-row" onclick="removeRow('workRow${index}')">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-                
-                <div class="row">
-                    <div class="col-md-5 mb-3">
-                        <label class="form-label">Наименование работы</label>
-                        <input type="text" name="works-${index}-name" 
-                               class="form-control work-name">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Норма времени (час)</label>
-                        <input type="number" step="0.1" name="works-${index}-time" 
-                               class="form-control work-time" value="0">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Скидка (%)</label>
-                        <input type="number" step="0.1" name="works-${index}-discount" 
-                               class="form-control work-discount" value="0">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Стоимость нормо-часа (руб.)</label>
-                        <input type="number" step="0.01" name="works-${index}-rate" 
-                               class="form-control work-rate" value="0">
-                    </div>
-                    <div class="col-md-1 mb-3">
-                        <label class="form-label">Стоимость (руб.)</label>
-                        <input type="number" step="0.01" name="works-${index}-total" 
-                               class="form-control work-total" value="0" readonly>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        $('#worksContainer').append(newRow);
-        workRowCount++;
-        attachWorkCalculations();
-    });
+    // Элементы DOM
+    const $customerNameInput = $('#customer_name');
+    const $customerPhoneInput = $('#customer_phone');
+    const $customerAddressInput = $('#customer_address');
+    const $customerIdInput = $('#selectedCustomerId');
+    const $customerDataInput = $('#selectedCustomerData');
+    const $selectVehicleBtn = $('#selectCustomerVehicle');
+    const $clearCustomerBtn = $('#clearCustomerSelection');
+    
+    // Поля транспортного средства
+    const $vehicleMake = $('#vehicle_make');
+    const $vehicleModel = $('#vehicle_model');
+    const $vehicleRegistration = $('#vehicle_registration');
+    const $vehicleVin = $('#vehicle_vin');
+    const $vehicleYear = $('#vehicle_year');
+    const $vehicleMileage = $('#vehicle_mileage');
 
-    // Добавление строки запчасти
-    $('#addPartRow').click(function() {
-        const index = partRowCount;
-        const newRow = `
-            <div class="dynamic-row" id="partRow${index}">
-                <button type="button" class="btn btn-sm remove-row" onclick="removeRow('partRow${index}')">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-                
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Наименование материала</label>
-                        <input type="text" name="parts-${index}-name" 
-                               class="form-control part-name">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Ед. изм.</label>
-                        <input type="text" name="parts-${index}-unit" 
-                               class="form-control part-unit" value="шт.">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Количество</label>
-                        <input type="number" name="parts-${index}-quantity" 
-                               class="form-control part-quantity" value="0">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Цена (руб.)</label>
-                        <input type="number" step="0.01" name="parts-${index}-price" 
-                               class="form-control part-price" value="0">
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Сумма (руб.)</label>
-                        <input type="number" step="0.01" name="parts-${index}-total" 
-                               class="form-control part-total" value="0" readonly>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        $('#partsContainer').append(newRow);
-        partRowCount++;
-        attachPartCalculations();
-    });
-
-    // Удаление строки
-    function removeRow(rowId) {
-        $('#' + rowId).remove();
-        calculateTotals();
-    }
-
-    // Привязка расчетов для работ
-    function attachWorkCalculations() {
-        $('.work-time, .work-discount, .work-rate').off('input').on('input', function() {
-            const row = $(this).closest('.dynamic-row');
-            calculateWorkTotal(row);
-            calculateTotals();
-        });
-    }
-
-    // Привязка расчетов для запчастей
-    function attachPartCalculations() {
-        $('.part-quantity, .part-price').off('input').on('input', function() {
-            const row = $(this).closest('.dynamic-row');
-            calculatePartTotal(row);
-            calculateTotals();
-        });
-    }
-
-    // Расчет суммы для работы
-    function calculateWorkTotal(row) {
-        const time = parseFloat(row.find('.work-time').val()) || 0;
-        const discount = parseFloat(row.find('.work-discount').val()) || 0;
-        const rate = parseFloat(row.find('.work-rate').val()) || 0;
-        
-        let total = time * rate;
-        if (discount > 0) {
-            total = total * (1 - discount / 100);
+    // Функция поиска клиентов
+    function searchCustomers(query, field) {
+        if (!query || query.length < 2) {
+            hideDropdown(field);
+            return;
         }
         
-        row.find('.work-total').val(total.toFixed(2));
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            $.ajax({
+                url: '{{ url_for("search_customers") }}',
+                data: {
+                    q: query,
+                    type: 'starts_with'
+                },
+                success: function(customers) {
+                    showDropdown(customers, field);
+                },
+                error: function() {
+                    console.error('Ошибка поиска клиентов');
+                    hideDropdown(field);
+                }
+            });
+        }, 300);
     }
 
-    // Расчет суммы для запчасти
-    function calculatePartTotal(row) {
-        const quantity = parseFloat(row.find('.part-quantity').val()) || 0;
-        const price = parseFloat(row.find('.part-price').val()) || 0;
-        const total = quantity * price;
+    // Показать выпадающий список
+    function showDropdown(customers, field) {
+        const $dropdown = $('#' + field + 'Dropdown');
+        $dropdown.empty();
         
-        row.find('.part-total').val(total.toFixed(2));
+        if (customers.length === 0) {
+            $dropdown.append(`
+                <div class="autocomplete-item text-muted">
+                    <i class="bi bi-search"></i> Клиенты не найдены
+                </div>
+            `);
+        } else {
+            customers.forEach(function(customer) {
+                // Безопасное преобразование данных для data-атрибута
+                const customerData = JSON.stringify(customer)
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, "&#39;");
+                
+                const item = `
+                    <div class="autocomplete-item" 
+                        data-customer='${customerData}'>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${escapeHtml(customer.full_name)}</strong>
+                                <div class="customer-info">
+                                    <i class="bi bi-telephone"></i> ${escapeHtml(customer.phone)}
+                                    ${customer.email ? `<br><i class="bi bi-envelope"></i> ${escapeHtml(customer.email)}` : ''}
+                                    ${customer.address ? `<br><i class="bi bi-geo-alt"></i> ${escapeHtml(customer.address.substring(0, 50))}${customer.address.length > 50 ? '...' : ''}` : ''}
+                                </div>
+                            </div>
+                            <div class="vehicles-count">
+                                <small>
+                                    <i class="bi bi-car-front"></i> ${customer.vehicles ? customer.vehicles.length : 0}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $dropdown.append(item);
+            });
+        }
+        
+        $dropdown.show();
+        
+        // Привязка кликов с использованием делегирования событий
+        $dropdown.on('click', '.autocomplete-item', function() {
+            // jQuery data() уже парсит JSON, получаем объект напрямую
+            const customerData = $(this).data('customer');
+            
+            if (customerData && typeof customerData === 'object') {
+                selectCustomer(customerData);
+                hideAllDropdowns();
+            } else {
+                console.error('Некорректные данные клиента:', customerData);
+            }
+        });
     }
 
-    // Расчет итоговых сумм
-    function calculateTotals() {
-        let worksTotal = 0;
-        let partsTotal = 0;
+    // Функция для экранирования HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // Скрыть выпадающий список
+    function hideDropdown(field) {
+        $('#' + field + 'Dropdown').hide();
+    }
+
+    // Скрыть все выпадающие списки
+    function hideAllDropdowns() {
+        $('.autocomplete-dropdown').hide();
+    }
+
+    // Выбрать клиента
+    function selectCustomer(customer) {
+        console.log('Выбран клиент:', customer);
+        selectedCustomer = customer;
         
-        // Сумма работ
-        $('.work-total').each(function() {
-            worksTotal += parseFloat($(this).val()) || 0;
+        // Заполнить поля формы
+        $customerNameInput.val(customer.full_name || '');
+        $customerPhoneInput.val(customer.phone || '');
+        $customerAddressInput.val(customer.address || '');
+        
+        // Заполнить скрытые поля
+        $customerIdInput.val(customer.id || '');
+        $customerDataInput.val(JSON.stringify(customer) || '');
+        
+        // Сделать поля readonly
+        $customerNameInput.prop('readonly', true).addClass('field-readonly');
+        $customerPhoneInput.prop('readonly', true).addClass('field-readonly');
+        $customerAddressInput.prop('readonly', true).addClass('field-readonly');
+        
+        // Показать кнопки
+        $selectVehicleBtn.show();
+        $clearCustomerBtn.show();
+        
+        // Фокус на следующее поле
+        $vehicleMake.focus();
+    }
+
+    // Очистить выбор клиента
+    function clearCustomerSelection() {
+        selectedCustomer = null;
+        
+        // Очистить поля
+        $customerNameInput.val('').prop('readonly', false).removeClass('field-readonly');
+        $customerPhoneInput.val('').prop('readonly', false).removeClass('field-readonly');
+        $customerAddressInput.val('').prop('readonly', false).removeClass('field-readonly');
+        
+        // Очистить скрытые поля
+        $customerIdInput.val('');
+        $customerDataInput.val('');
+        
+        // Скрыть кнопки
+        $selectVehicleBtn.hide();
+        $clearCustomerBtn.hide();
+        
+        // Очистить поля ТС
+        clearVehicleFields();
+        
+        // Фокус на поле поиска
+        $customerNameInput.focus();
+    }
+
+    // Очистить поля транспортного средства
+    function clearVehicleFields() {
+        $vehicleMake.val('');
+        $vehicleModel.val('');
+        $vehicleRegistration.val('');
+        $vehicleVin.val('');
+        $vehicleYear.val('');
+        $vehicleMileage.val('');
+    }
+
+    // Загрузить автомобили клиента
+    function loadCustomerVehicles() {
+        if (!selectedCustomer || !selectedCustomer.vehicles || selectedCustomer.vehicles.length === 0) {
+            $('#noVehiclesMessage').show();
+            $('#customerVehiclesList').hide().empty();
+            return;
+        }
+        
+        $('#noVehiclesMessage').hide();
+        $('#customerVehiclesList').show().empty();
+        
+        selectedCustomer.vehicles.forEach(function(vehicle, index) {
+            const vehicleData = JSON.stringify(vehicle)
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, "&#39;");
+            
+            const vehicleItem = `
+                <button type="button" 
+                        class="list-group-item list-group-item-action vehicle-item"
+                        data-vehicle='${vehicleData}'>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${escapeHtml(vehicle.vehicle_make)} ${escapeHtml(vehicle.vehicle_model)}</strong>
+                            <div class="small text-muted">
+                                ${vehicle.vehicle_registration ? `<i class="bi bi-tag"></i> ${escapeHtml(vehicle.vehicle_registration)}<br>` : ''}
+                                ${vehicle.vehicle_vin ? `<i class="bi bi-upc-scan"></i> VIN: ${escapeHtml(vehicle.vehicle_vin)}<br>` : ''}
+                                ${vehicle.vehicle_year ? `<i class="bi bi-calendar"></i> ${escapeHtml(vehicle.vehicle_year)} г.` : ''}
+                                ${vehicle.vehicle_mileage ? `<i class="bi bi-speedometer2"></i> ${escapeHtml(vehicle.vehicle_mileage)} км` : ''}
+                            </div>
+                        </div>
+                        <div>
+                            <i class="bi bi-check-circle text-success"></i>
+                        </div>
+                    </div>
+                </button>
+            `;
+            $('#customerVehiclesList').append(vehicleItem);
         });
         
-        // Сумма запчастей
-        $('.part-total').each(function() {
-            partsTotal += parseFloat($(this).val()) || 0;
+        // Привязка кликов к автомобилям с делегированием
+        $('#customerVehiclesList').on('click', '.vehicle-item', function() {
+            // jQuery data() уже парсит JSON
+            const vehicle = $(this).data('vehicle');
+            
+            if (vehicle && typeof vehicle === 'object') {
+                selectVehicle(vehicle);
+            } else {
+                console.error('Некорректные данные автомобиля:', vehicle);
+            }
         });
+    }
+
+    // Выбрать автомобиль
+    function selectVehicle(vehicle) {
+        console.log('Выбран автомобиль:', vehicle);
+        $vehicleMake.val(vehicle.vehicle_make || '');
+        $vehicleModel.val(vehicle.vehicle_model || '');
+        $vehicleRegistration.val(vehicle.vehicle_registration || '');
+        $vehicleVin.val(vehicle.vehicle_vin || '');
+        $vehicleYear.val(vehicle.vehicle_year || '');
+        $vehicleMileage.val(vehicle.vehicle_mileage || '');
         
-        // Обновление отображения
-        $('#worksTotal').text(worksTotal.toFixed(2));
-        $('#partsTotal').text(partsTotal.toFixed(2));
-        $('#finalWorksTotal').text(worksTotal.toFixed(2));
-        $('#finalPartsTotal').text(partsTotal.toFixed(2));
-        $('#finalTotal').text((worksTotal + partsTotal).toFixed(2));
+        // Закрыть модальное окно
+        $('#vehicleSelectModal').modal('hide');
+        
+        // Фокус на следующее поле
+        $('input[name="reason"]').focus();
     }
 
     // Инициализация
     $(document).ready(function() {
+        console.log('Инициализация формы создания отчета');
+        
+        // Поиск при вводе в поле ФИО
+        $customerNameInput.on('input', function() {
+            const query = $(this).val().trim();
+            searchCustomers(query, 'customerName');
+        });
+        
+        // Поиск при вводе в поле телефона
+        $customerPhoneInput.on('input', function() {
+            const query = $(this).val().trim();
+            searchCustomers(query, 'customerPhone');
+        });
+        
+        // Очистить выбор клиента
+        $clearCustomerBtn.click(function() {
+            console.log('Очистка выбора клиента');
+            clearCustomerSelection();
+        });
+        
+        // Загрузка автомобилей при открытии модального окна
+        $('#vehicleSelectModal').on('show.bs.modal', function() {
+            console.log('Открытие модального окна выбора автомобиля');
+            loadCustomerVehicles();
+        });
+        
+        // Скрыть выпадающие списки при клике вне их
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.autocomplete-wrapper').length) {
+                hideAllDropdowns();
+            }
+        });
+        
+        // Запретить отправку формы при нажатии Enter в полях поиска
+        $('.customer-search-field').on('keydown', function(e) {
+            if (e.keyCode === 13) {
+                e.preventDefault();
+                
+                // Если есть элементы в выпадающем списке, выбрать первый
+                const $dropdown = $(this).closest('.autocomplete-wrapper').find('.autocomplete-dropdown');
+                const $firstItem = $dropdown.find('.autocomplete-item').first();
+                if ($firstItem.length && !$firstItem.hasClass('text-muted')) {
+                    $firstItem.click();
+                }
+                
+                return false;
+            }
+        });
+        
+        // Клавиши навигации в выпадающем списке
+        $(document).on('keydown', function(e) {
+            const $visibleDropdown = $('.autocomplete-dropdown:visible');
+            if ($visibleDropdown.length) {
+                const $items = $visibleDropdown.find('.autocomplete-item:not(.text-muted)');
+                const $active = $items.filter('.active');
+                
+                if (e.keyCode === 40) { // Стрелка вниз
+                    e.preventDefault();
+                    if (!$active.length) {
+                        $items.first().addClass('active');
+                    } else {
+                        $active.removeClass('active').next().addClass('active');
+                    }
+                } else if (e.keyCode === 38) { // Стрелка вверх
+                    e.preventDefault();
+                    if (!$active.length) {
+                        $items.last().addClass('active');
+                    } else {
+                        $active.removeClass('active').prev().addClass('active');
+                    }
+                } else if (e.keyCode === 13 && $active.length) { // Enter
+                    e.preventDefault();
+                    $active.click();
+                }
+            }
+        });
+        
+        // Подсветка при наведении
+        $(document).on('mouseenter', '.autocomplete-item', function() {
+            $(this).addClass('active');
+        }).on('mouseleave', '.autocomplete-item', function() {
+            $(this).removeClass('active');
+        });
+        
+        // Если при загрузке страницы есть данные клиента, заполнить их
+        {% if report and report.customer_phone %}
+            console.log('Поиск клиента по телефону из существующего отчета');
+            // Ищем клиента по телефону
+            $.ajax({
+                url: '{{ url_for("search_customers") }}',
+                data: {
+                    q: '{{ report.customer_phone }}',
+                    type: 'contains'
+                },
+                success: function(customers) {
+                    console.log('Найдено клиентов:', customers.length);
+                    if (customers.length > 0) {
+                        const exactMatch = customers.find(function(c) {
+                            return c.phone === '{{ report.customer_phone }}';
+                        });
+                        
+                        if (exactMatch) {
+                            console.log('Точное совпадение найдено:', exactMatch);
+                            selectCustomer(exactMatch);
+                            
+                            // Если есть данные ТС, попробуем сопоставить с автомобилями клиента
+                            {% if report.vehicle_make and report.vehicle_model %}
+                                if (exactMatch.vehicles && exactMatch.vehicles.length > 0) {
+                                    const matchedVehicle = exactMatch.vehicles.find(function(v) {
+                                        return v.vehicle_make === '{{ report.vehicle_make }}' && 
+                                               v.vehicle_model === '{{ report.vehicle_model }}';
+                                    });
+                                    
+                                    if (!matchedVehicle) {
+                                        // Если автомобиль не найден у клиента, очищаем выбор
+                                        clearVehicleFields();
+                                    }
+                                }
+                            {% endif %}
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ошибка поиска клиента:', error);
+                }
+            });
+        {% endif %}
+        
+        // Инициализация расчетов для работ и запчастей
+        initCalculations();
+    });
+
+    // Инициализация расчетов стоимости
+    function initCalculations() {
+        console.log('Инициализация расчетов стоимости');
+        
+        // Добавление строки работы
+        $('#addWorkRow').click(function() {
+            const index = workRowCount;
+            const newRow = `
+                <div class="dynamic-row" id="workRow${index}">
+                    <button type="button" class="btn btn-sm remove-row" onclick="removeRow('workRow${index}')">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                    
+                    <div class="row">
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label">Наименование работы</label>
+                            <input type="text" name="works-${index}-name" 
+                                   class="form-control work-name">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Норма времени (час)</label>
+                            <input type="number" step="0.1" name="works-${index}-time" 
+                                   class="form-control work-time" value="0">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Скидка (%)</label>
+                            <input type="number" step="0.1" name="works-${index}-discount" 
+                                   class="form-control work-discount" value="0">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Стоимость нормо-часа (руб.)</label>
+                            <input type="number" step="0.01" name="works-${index}-rate" 
+                                   class="form-control work-rate" value="0">
+                        </div>
+                        <div class="col-md-1 mb-3">
+                            <label class="form-label">Стоимость (руб.)</label>
+                            <input type="number" step="0.01" name="works-${index}-total" 
+                                   class="form-control work-total" value="0" readonly>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#worksContainer').append(newRow);
+            workRowCount++;
+            attachWorkCalculations();
+        });
+
+        // Добавление строки запчасти
+        $('#addPartRow').click(function() {
+            const index = partRowCount;
+            const newRow = `
+                <div class="dynamic-row" id="partRow${index}">
+                    <button type="button" class="btn btn-sm remove-row" onclick="removeRow('partRow${index}')">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Наименование материала</label>
+                            <input type="text" name="parts-${index}-name" 
+                                   class="form-control part-name">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Ед. изм.</label>
+                            <input type="text" name="parts-${index}-unit" 
+                                   class="form-control part-unit" value="шт.">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Количество</label>
+                            <input type="number" name="parts-${index}-quantity" 
+                                   class="form-control part-quantity" value="0">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Цена (руб.)</label>
+                            <input type="number" step="0.01" name="parts-${index}-price" 
+                                   class="form-control part-price" value="0">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Сумма (руб.)</label>
+                            <input type="number" step="0.01" name="parts-${index}-total" 
+                                   class="form-control part-total" value="0" readonly>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#partsContainer').append(newRow);
+            partRowCount++;
+            attachPartCalculations();
+        });
+
+        // Привязка расчетов для работ
+        function attachWorkCalculations() {
+            $('.work-time, .work-discount, .work-rate').off('input').on('input', function() {
+                const row = $(this).closest('.dynamic-row');
+                calculateWorkTotal(row);
+                calculateTotals();
+            });
+            
+            // Расчет для существующих строк
+            $('.dynamic-row').each(function() {
+                if ($(this).find('.work-time').length) {
+                    calculateWorkTotal($(this));
+                }
+            });
+        }
+
+        // Привязка расчетов для запчастей
+        function attachPartCalculations() {
+            $('.part-quantity, .part-price').off('input').on('input', function() {
+                const row = $(this).closest('.dynamic-row');
+                calculatePartTotal(row);
+                calculateTotals();
+            });
+            
+            // Расчет для существующих строк
+            $('.dynamic-row').each(function() {
+                if ($(this).find('.part-quantity').length) {
+                    calculatePartTotal($(this));
+                }
+            });
+        }
+
+        // Расчет суммы для работы
+        function calculateWorkTotal(row) {
+            const time = parseFloat(row.find('.work-time').val()) || 0;
+            const discount = parseFloat(row.find('.work-discount').val()) || 0;
+            const rate = parseFloat(row.find('.work-rate').val()) || 0;
+            
+            let total = time * rate;
+            if (discount > 0) {
+                total = total * (1 - discount / 100);
+            }
+            
+            row.find('.work-total').val(total.toFixed(2));
+        }
+
+        // Расчет суммы для запчасти
+        function calculatePartTotal(row) {
+            const quantity = parseFloat(row.find('.part-quantity').val()) || 0;
+            const price = parseFloat(row.find('.part-price').val()) || 0;
+            const total = quantity * price;
+            
+            row.find('.part-total').val(total.toFixed(2));
+        }
+
+        // Расчет итоговых сумм
+        function calculateTotals() {
+            let worksTotal = 0;
+            let partsTotal = 0;
+            
+            // Сумма работ
+            $('.work-total').each(function() {
+                worksTotal += parseFloat($(this).val()) || 0;
+            });
+            
+            // Сумма запчастей
+            $('.part-total').each(function() {
+                partsTotal += parseFloat($(this).val()) || 0;
+            });
+            
+            // Обновление отображения
+            $('#worksTotal').text(worksTotal.toFixed(2));
+            $('#partsTotal').text(partsTotal.toFixed(2));
+            $('#finalWorksTotal').text(worksTotal.toFixed(2));
+            $('#finalPartsTotal').text(partsTotal.toFixed(2));
+            $('#finalTotal').text((worksTotal + partsTotal).toFixed(2));
+        }
+
+        // Удаление строки
+        window.removeRow = function(rowId) {
+            $('#' + rowId).remove();
+            calculateTotals();
+        };
+
+        // Инициализация расчетов
         attachWorkCalculations();
         attachPartCalculations();
         calculateTotals();
@@ -615,6 +1160,6 @@
             
             return true;
         });
-    });
+    }
 </script>
 {% endblock %}

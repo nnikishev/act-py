@@ -76,9 +76,9 @@
                        class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Назад
                     </a>
-                    <button onclick="window.print()" class="btn btn-outline-success">
+                    <!-- <button onclick="window.print()" class="btn btn-outline-success">
                         <i class="bi bi-printer"></i> Печать
-                    </button>
+                    </button> -->
                     {% if report.pdf_path %}
                     <a href="{{ url_for('download_pdf', report_id=report.id) }}" 
                        class="btn btn-success">

@@ -276,15 +276,15 @@
         </div>
 
         <!-- Гарантия -->
-        <div class="report-section">
+        <!-- <div class="report-section">
             <h4><i class="bi bi-shield-check"></i> Гарантийные обязательства</h4>
             <div class="warranty-box">
                 {{ report.warranty_info|replace('\n', '<br>')|safe }}
             </div>
-        </div>
+        </div> -->
 
         <!-- Подписи -->
-        <div class="report-section">
+        <!-- <div class="report-section">
             <h4><i class="bi bi-pen"></i> Подписи сторон</h4>
             <div class="row">
                 <div class="col-md-6">
@@ -302,7 +302,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- Боковая панель с действиями -->
@@ -334,10 +334,10 @@
                         </form>
                         {% endif %}
                         
-                        <a href="{{ url_for('preview_report', report_id=report.id) }}" 
+                        <!-- <a href="{{ url_for('preview_report', report_id=report.id) }}" 
                            class="btn btn-info" target="_blank">
                             <i class="bi bi-eye"></i> Предпросмотр
-                        </a>
+                        </a> -->
                         
                         <a href="{{ url_for('report_list') }}" 
                            class="btn btn-outline-secondary">

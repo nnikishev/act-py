@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Клиенты - CRM Box18{% endblock %}
+
+{% block styles %}
+<style>
+    .customer-card {
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
+    .customer-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+    }
+    .customer-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    .vehicle-badge {
+        font-size: 0.7rem;
+        margin: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="bi bi-people"></i> Клиентская база
+            </h2>
+            <a href="{{ url_for('create_customer') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus"></i> Новый клиент
+            </a>
+        </div>
+        
+        <!-- Фильтры и поиск -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('customer_list') }}" class="row g-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="Поиск по фамилии, имени, телефону, номеру ВУ или автомобилю..." 
+                                   value="{{ search }}">
+                            <button class="btn btn-primary" type="submit">
+                                Найти
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('customer_list', status='all', search=search) }}" 
+                               class="btn btn-outline-primary {{ 'filter-active' if status == 'all' }}">
+                                Все
+                            </a>
+                            <a href="{{ url_for('customer_list', status='active', search=search) }}" 
+                               class="btn btn-outline-success {{ 'filter-active' if status == 'active' }}">
+                                Активные
+                            </a>
+                            <a href="{{ url_for('customer_list', status='inactive', search=search) }}" 
+                               class="btn btn-outline-secondary {{ 'filter-active' if status == 'inactive' }}">
+                                Неактивные
+                            </a>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Статистика -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="text-muted">
+                                    Найдено: <strong>{{ customers.total }}</strong> клиентов
+                                </span>
+                            </div>
+                            <div>
+                                <span class="text-muted">
+                                    Страница {{ customers.page }} из {{ customers.pages }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Список клиентов -->
+<div class="row">
+    {% for customer in customers.items %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card customer-card h-100" onclick="window.location='{{ url_for('customer_detail', customer_id=customer.id) }}'" 
+             style="cursor: pointer;">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <div class="customer-avatar me-3">
+                        {{ customer.last_name[0] }}{{ customer.first_name[0] }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">
+                            {{ customer.last_name }} {{ customer.first_name }} 
+                            {% if customer.middle_name %}{{ customer.middle_name }}{% endif %}
+                        </h5>
+                        <p class="card-text mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-telephone"></i> {{ customer.phone }}
+                                {% if customer.email %}
+                                <br><i class="bi bi-envelope"></i> {{ customer.email }}
+                                {% endif %}
+                            </small>
+                        </p>
+                        
+                        <!-- Автомобили -->
+                        {% if customer.get_vehicles() %}
+                        <div class="mb-2">
+                            {% for vehicle in customer.get_vehicles() %}
+                            <span class="badge bg-light text-dark vehicle-badge" title="{{ vehicle.vehicle_make }} {{ vehicle.vehicle_model }}">
+                                {{ vehicle.vehicle_make[:10] }} {{ vehicle.vehicle_model[:10] }}
+                                {% if vehicle.vehicle_registration %}
+                                <small class="text-muted">({{ vehicle.vehicle_registration }})</small>
+                                {% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Дополнительная информация -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-{{ 'success' if customer.status == 'active' else 'secondary' }}">
+                                {{ 'Активный' if customer.status == 'active' else 'Неактивный' }}
+                            </span>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> {{ customer.created_at.strftime('%d.%m.%Y') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <div class="text-muted">
+                    <i class="bi bi-people display-4"></i>
+                    <h5 class="mt-3">Клиенты не найдены</h5>
+                    <p>Создайте первого клиента или измените параметры поиска</p>
+                    <a href="{{ url_for('create_customer') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Создать первого клиента
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Пагинация -->
+{% if customers.pages > 1 %}
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="Навигация по страницам">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not customers.has_prev %}disabled{% endif %}">
+                    <a class="page-link" 
+                       href="{{ url_for('customer_list', page=customers.prev_num, status=status, search=search) }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                
+                {% for page_num in customers.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == customers.page %}active{% endif %}">
+                            <a class="page-link" 
+                               href="{{ url_for('customer_list', page=page_num, status=status, search=search) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <li class="page-item {% if not customers.has_next %}disabled{% endif %}">
+                    <a class="page-link" 
+                       href="{{ url_for('customer_list', page=customers.next_num, status=status, search=search) }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

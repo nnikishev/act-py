@@ -7,9 +7,10 @@ import json
 from pathlib import Path
 
 from config import config
-from db import db, Report
-from forms import ReportForm, WorkForm, PartForm
+from db import db, Report, Customer
+from forms import ReportForm, WorkForm, PartForm, CustomerForm, CustomerSearchForm, VehicleForm
 from report_generator import report_generator
+from flask_migrate import Migrate
 
 def create_app(config_name='default'):
     """Фабрика приложения"""
@@ -20,6 +21,7 @@ def create_app(config_name='default'):
     # Инициализация расширений
     db.init_app(app)
     report_generator.init_app(app)
+    migrate = Migrate(app, db)
     
     # Создаем директории
     with app.app_context():
@@ -95,6 +97,34 @@ def register_template_filters(app):
                     'draft_reports': 0,
                     'recent_reports': []
                 }
+    # @app.context_processor
+    # def inject_stats():
+    #     """Добавление статистики в контекст"""
+    #     with app.app_context():
+    #         try:
+    #             total_reports = Report.query.count()
+    #             generated_reports = Report.query.filter_by(status='generated').count()
+    #             draft_reports = Report.query.filter_by(status='draft').count()
+    #             total_customers = Customer.query.count()
+    #             active_customers = Customer.query.filter_by(status='active').count()
+                
+    #             return {
+    #                 'total_reports': total_reports,
+    #                 'generated_reports': generated_reports,
+    #                 'draft_reports': draft_reports,
+    #                 'total_customers': total_customers,
+    #                 'active_customers': active_customers,
+    #                 'recent_reports': Report.query.order_by(Report.created_at.desc()).limit(5).all()
+    #             }
+    #         except:
+    #             return {
+    #                 'total_reports': 0,
+    #                 'generated_reports': 0,
+    #                 'draft_reports': 0,
+    #                 'total_customers': 0,
+    #                 'active_customers': 0,
+    #                 'recent_reports': []
+    #             }
 
 def register_routes(app):
     """Регистрация маршрутов"""
@@ -631,6 +661,228 @@ def register_routes(app):
             flash(f'Ошибка инициализации БД: {str(e)}', 'danger')
         
         return redirect(url_for('index'))
+    
+    @app.route('/customer_list')
+    def customer_list():
+        """Список клиентов"""
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        
+        # Фильтрация и поиск
+        status = request.args.get('status', 'all')
+        search = request.args.get('search', '')
+        
+        query = Customer.query
+        
+        if status != 'all':
+            query = query.filter_by(status=status)
+        
+        if search:
+            # Поиск по фамилии, имени, телефону, email, номеру ВУ
+            query = query.filter(
+                (Customer.last_name.contains(search)) |
+                (Customer.first_name.contains(search)) |
+                (Customer.phone.contains(search)) |
+                (Customer.email.contains(search)) |
+                (Customer.driver_license.contains(search)) |
+                (Customer.vehicles_data.contains(search))  # Поиск по автомобилям в JSON
+            )
+        
+        customers = query.order_by(Customer.last_name, Customer.first_name).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        search_form = CustomerSearchForm()
+        if search:
+            search_form.search.data = search
+        search_form.status.data = status
+        
+        return render_template('customer_list.html', 
+                            customers=customers, 
+                            search_form=search_form,
+                            status=status,
+                            search=search)
+
+    @app.route('/customers/new', methods=['GET', 'POST'])
+    def create_customer():
+        """Создание нового клиента"""
+        form = CustomerForm()
+        
+        if form.validate_on_submit():
+            try:
+                if not form.address.data:
+                    form.address.data = "Адрес не указан"
+                customer = Customer(
+                    last_name=form.last_name.data,
+                    first_name=form.first_name.data,
+                    middle_name=form.middle_name.data,
+                    phone=form.phone.data,
+                    email=form.email.data,
+                    address=form.address.data,
+                    driver_license=form.driver_license.data,
+                    notes=form.notes.data,
+                    status=form.status.data
+                )
+                
+                db.session.add(customer)
+                db.session.commit()
+                
+                flash('Клиент успешно создан!', 'success')
+                return redirect(url_for('customer_detail', customer_id=customer.id))
+                
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Ошибка при создании клиента: {e}", exc_info=True)
+                flash(f'Ошибка при создании клиента: {str(e)}', 'danger')
+        
+        return render_template('customer_form.html', 
+                            form=form, 
+                            title="Создание клиента")
+
+    @app.route('/customers/<int:customer_id>')
+    def customer_detail(customer_id):
+        """Просмотр карточки клиента"""
+        customer = Customer.query.get_or_404(customer_id)
+        reports = (Report.query
+            .filter_by(customer_name=f"{customer.last_name} {customer.first_name} {customer.middle_name}", status='generated')
+
+            .order_by(Report.created_at.desc())
+            .limit(10).all()
+        )
+        return render_template('customer_detail.html', 
+                            customer=customer,
+                            reports=reports)
+
+    @app.route('/customers/<int:customer_id>/edit', methods=['GET', 'POST'])
+    def edit_customer(customer_id):
+        """Редактирование клиента"""
+        customer = Customer.query.get_or_404(customer_id)
+        form = CustomerForm(obj=customer)
+        
+        if form.validate_on_submit():
+            try:
+                form.populate_obj(customer)
+                db.session.commit()
+                
+                flash('Данные клиента обновлены!', 'success')
+                return redirect(url_for('customer_detail', customer_id=customer.id))
+                
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"Ошибка при обновлении клиента: {e}", exc_info=True)
+                flash(f'Ошибка при обновлении клиента: {str(e)}', 'danger')
+        
+        return render_template('customer_form.html', 
+                            form=form, 
+                            customer=customer,
+                            title="Редактирование клиента")
+
+    @app.route('/customers/<int:customer_id>/delete', methods=['POST'])
+    def delete_customer(customer_id):
+        """Удаление клиента"""
+        customer = Customer.query.get_or_404(customer_id)
+        
+        try:
+            db.session.delete(customer)
+            db.session.commit()
+            flash('Клиент удален!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Ошибка при удалении клиента: {str(e)}', 'danger')
+        
+        return redirect(url_for('customer_list'))
+
+    @app.route('/customers/<int:customer_id>/add_vehicle', methods=['POST'])
+    def add_vehicle(customer_id):
+        """Добавление автомобиля клиенту"""
+        customer = Customer.query.get_or_404(customer_id)
+        
+        try:
+            vehicle_data = {
+                'vehicle_make': request.form.get('vehicle_make', '').strip(),
+                'vehicle_model': request.form.get('vehicle_model', '').strip(),
+                'vehicle_registration': request.form.get('vehicle_registration', '').strip(),
+                'vehicle_vin': request.form.get('vehicle_vin', '').strip(),
+                'vehicle_year': request.form.get('vehicle_year', '').strip(),
+                'vehicle_mileage': request.form.get('vehicle_mileage', '').strip()
+            }
+            
+            # Проверка обязательных полей
+            if not vehicle_data['vehicle_make'] or not vehicle_data['vehicle_model']:
+                flash('Заполните марку и модель автомобиля', 'warning')
+                return redirect(url_for('customer_detail', customer_id=customer_id))
+            
+            customer.add_vehicle(vehicle_data)
+            db.session.commit()
+            
+            flash('Автомобиль добавлен!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Ошибка при добавлении автомобиля: {str(e)}', 'danger')
+        
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+
+    @app.route('/customers/<int:customer_id>/remove_vehicle/<int:vehicle_index>', methods=['POST'])
+    def remove_vehicle(customer_id, vehicle_index):
+        """Удаление автомобиля у клиента"""
+        customer = Customer.query.get_or_404(customer_id)
+        
+        try:
+            vehicles = customer.get_vehicles()
+            if 0 <= vehicle_index < len(vehicles):
+                vehicles.pop(vehicle_index)
+                customer.vehicles_data = json.dumps(vehicles, ensure_ascii=False)
+                db.session.commit()
+                flash('Автомобиль удален!', 'success')
+            else:
+                flash('Автомобиль не найден', 'warning')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Ошибка при удалении автомобиля: {str(e)}', 'danger')
+        
+        return redirect(url_for('customer_detail', customer_id=customer_id))
+
+    @app.route('/api/customers/search')
+    def search_customers():
+        """Поиск клиентов для автодополнения"""
+        search = request.args.get('q', '')
+        search_type = request.args.get('type', 'contains')  # contains, starts_with
+        
+        if not search:
+            return jsonify([])
+        
+        query = Customer.query
+        
+        if search_type == 'starts_with':
+            # Поиск начинающихся с введенного текста
+            query = query.filter(
+                (Customer.last_name.startswith(search)) |
+                (Customer.first_name.startswith(search)) |
+                (Customer.phone.startswith(search))
+            )
+        else:
+            # Поиск содержащих текст
+            query = query.filter(
+                (Customer.last_name.contains(search)) |
+                (Customer.first_name.contains(search)) |
+                (Customer.phone.contains(search))
+            )
+        
+        customers = query.limit(20).all()
+        
+        result = [{
+            'id': c.id,
+            'full_name': c.get_full_name(),
+            'last_name': c.last_name,
+            'first_name': c.first_name,
+            'middle_name': c.middle_name,
+            'phone': c.phone,
+            'email': c.email,
+            'address': c.address,
+            'vehicles': c.get_vehicles()
+        } for c in customers]
+        
+        return jsonify(result)
 
 def register_error_handlers(app):
     """Обработчики ошибок"""

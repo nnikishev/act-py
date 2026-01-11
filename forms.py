@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, IntegerField, FloatField, SelectField, FieldList, FormField, SubmitField
-from wtforms.validators import DataRequired, Length, Optional, NumberRange
+from wtforms.validators import DataRequired, Length, Optional, NumberRange, Email
 from wtforms.fields import DateField
 
 class WorkForm(FlaskForm):
@@ -59,3 +59,39 @@ class ReportForm(FlaskForm):
     submit = SubmitField('Сохранить черновик')
     generate_pdf = SubmitField('Сгенерировать PDF')
     preview = SubmitField('Предпросмотр')
+
+
+class VehicleForm(FlaskForm):
+    """Форма для добавления автомобиля"""
+    vehicle_make = StringField('Марка', validators=[DataRequired()])
+    vehicle_model = StringField('Модель', validators=[DataRequired()])
+    vehicle_registration = StringField('Гос. номер', validators=[DataRequired()])
+    vehicle_vin = StringField('VIN', validators=[Optional()])
+    vehicle_year = StringField('Год выпуска', validators=[Optional()])
+    vehicle_mileage = StringField('Пробег', validators=[Optional()])
+    
+class CustomerForm(FlaskForm):
+    """Форма клиента"""
+    last_name = StringField('Фамилия*', validators=[DataRequired(), Length(max=100)])
+    first_name = StringField('Имя*', validators=[DataRequired(), Length(max=100)])
+    middle_name = StringField('Отчество', validators=[Length(max=100)])
+    
+    phone = StringField('Телефон*', validators=[DataRequired(), Length(max=50)])
+    email = StringField('Email', validators=[Optional(), Email(), Length(max=200)])
+    address = StringField('Адрес', validators=[Length(max=300)])
+    
+    driver_license = StringField('Номер ВУ', validators=[Length(max=50)])
+    notes = TextAreaField('Примечания')
+    status = SelectField('Статус', choices=[
+        ('active', 'Активный'),
+        ('inactive', 'Неактивный')
+    ], default='active')
+    
+class CustomerSearchForm(FlaskForm):
+    """Форма поиска клиентов"""
+    search = StringField('Поиск')
+    status = SelectField('Статус', choices=[
+        ('all', 'Все'),
+        ('active', 'Активные'),
+        ('inactive', 'Неактивные')
+    ], default='all')
