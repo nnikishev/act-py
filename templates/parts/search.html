@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск запчастей - Box18{% endblock %}
+
+{% block styles %}
+<style>
+    .part-card {
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
+    .part-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+    }
+    .stock-badge {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+    }
+    .price-tag {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #198754;
+    }
+    .no-stock {
+        color: #dc3545;
+        font-weight: 500;
+    }
+    .search-highlight {
+        background-color: #fff3cd;
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="bi bi-search"></i> Поиск запчастей
+                </h2>
+                <!-- <a href="{{ url_for('create_report') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> К созданию акта
+                </a> -->
+            </div>
+            <p class="text-muted">
+                Поиск запчастей через каталог Rossko. Используйте артикул, бренд или название.
+            </p>
+        </div>
+    </div>
+
+    <!-- Форма поиска -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('search_parts') }}">
+                        <div class="input-group input-group-lg">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="search_query" 
+                                   placeholder="Введите артикул, бренд или название запчасти..."
+                                   value="{{ search_query }}"
+                                   required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search"></i> Найти
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            <small class="text-muted">
+                                Примеры: "333114", "KYB 333114", "амортизационная стойка", "масло моторное"
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты поиска -->
+    {% if error %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> {{ error }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if parts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>
+                    Найдено запчастей: <span class="badge bg-primary">{{ parts|length }}</span>
+                </h5>
+                {% if last_search and last_search != search_query %}
+                <a href="{{ url_for('search_parts') }}?q={{ last_search }}" 
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-clock-history"></i> Вернуться к "{{ last_search }}"
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for part in parts %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card part-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title mb-0">
+                            {{ part.brand }} 
+                            <span class="text-primary">{{ part.part_number }}</span>
+                        </h6>
+                        <span class="badge bg-light text-dark border">
+                            {{ part.guid[:8] }}...
+                        </span>
+                    </div>
+                    
+                    <p class="card-text small text-muted mb-3">
+                        {{ part.name[:100] }}{% if part.name|length > 100 %}...{% endif %}
+                    </p>
+                    
+                    <div class="mb-3">
+                        {% if part.stocks %}
+                            {% set available_stocks = part.stocks|selectattr('count', 'gt', 0)|list %}
+                            {% if available_stocks %}
+                                {% set best_stock = available_stocks|sort(attribute='price')|first %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="price-tag">
+                                        {{ "%.2f"|format(best_stock.price) }} ₽
+                                    </span>
+                                    <span class="badge bg-success stock-badge">
+                                        <i class="bi bi-check-circle"></i> В наличии
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-geo-alt"></i> {{ best_stock.warehouse_description[:30] }}...
+                                        <br>
+                                        <i class="bi bi-truck"></i> Доставка: {{ best_stock.delivery_days }} дн.
+                                    </small>
+                                </div>
+                            {% else %}
+                                <span class="no-stock">
+                                    <i class="bi bi-x-circle"></i> Нет в наличии
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="no-stock">
+                                <i class="bi bi-question-circle"></i> Нет информации о наличии
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('part_detail', guid=part.guid) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-info-circle"></i> Подробнее
+                        </a>
+                        
+                        {% if part.stocks %}
+                            {% set available = part.stocks|selectattr('count', 'gt', 0)|list %}
+                            {% if available %}
+                            <button class="btn btn-sm btn-success" 
+                                    onclick="addToReport('{{ part.brand }}', '{{ part.part_number }}', '{{ part.name }}')">
+                                <i class="bi bi-plus"></i> Добавить
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if part.stocks and part.stocks|length > 1 %}
+                <div class="card-footer py-2">
+                    <small class="text-muted">
+                        <i class="bi bi-shop"></i> Ещё {{ part.stocks|length - 1 }} предложение(ий)
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% elif search_query and not error %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="text-muted">
+                        <i class="bi bi-search display-4"></i>
+                        <h4 class="mt-3">По запросу "{{ search_query }}" ничего не найдено</h4>
+                        <p class="mb-0">Попробуйте изменить поисковый запрос или уточнить артикул</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addToReport(brand, partNumber, name) {
+    // Здесь можно реализовать добавление в текущий акт
+    console.log('Добавить в акт:', { brand, partNumber, name });
+    
+    // Показываем уведомление
+    const toast = new bootstrap.Toast(document.getElementById('addToast'));
+    document.getElementById('toastMessage').textContent = 
+        `Добавлено: ${brand} ${partNumber}`;
+    toast.show();
+    
+    // Можно отправить AJAX запрос для добавления в текущий акт
+    // fetch('/api/add-part', {
+    //     method: 'POST',
+    //     headers: {'Content-Type': 'application/json'},
+    //     body: JSON.stringify({ brand, partNumber, name })
+    // })
+}
+</script>
+{% endblock %}

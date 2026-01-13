@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}{{ part.brand }} {{ part.part_number }} - Box18{% endblock %}
+
+{% block styles %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .stock-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .stock-available {
+        background-color: #d4edda !important;
+    }
+    .stock-unavailable {
+        background-color: #f8d7da !important;
+    }
+    .badge-available {
+        background-color: #198754;
+    }
+    .badge-unavailable {
+        background-color: #dc3545;
+    }
+    .action-buttons .btn {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('search_parts') }}">Поиск запчастей</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ part.brand }} {{ part.part_number }}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="detail-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">{{ part.brand }} 
+                    <span class="text-primary">{{ part.part_number }}</span>
+                </h2>
+                <h5 class="text-muted">{{ part.name }}</h5>
+                <div class="mt-3">
+                    <span class="badge bg-light text-dark border me-2">
+                        GUID: {{ part.guid }}
+                    </span>
+                    {% set available_stocks = part.stocks|selectattr('count', 'gt', 0)|list %}
+                    {% if available_stocks %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> В наличии: {{ available_stocks|length }} предложений
+                        </span>
+                    {% else %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle"></i> Нет в наличии
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="action-buttons">
+                    <a href="{{ url_for('search_parts') }}?q={{ search_query|urlencode }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Назад к поиску
+                    </a>
+                    {% set available_stocks = part.stocks|selectattr('count', 'gt', 0)|list %}
+                    {% if available_stocks %}
+                    <button class="btn btn-success mt-2 mt-md-0" 
+                            onclick="addToReport('{{ part.brand }}', '{{ part.part_number }}', '{{ part.name }}')">
+                        <i class="bi bi-plus-lg"></i> Добавить в акт
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Наличие на складах -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shop"></i> Наличие и цены
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if part.stocks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover stock-table">
+                            <thead>
+                                <tr>
+                                    <th>Склад</th>
+                                    <th class="text-end">Цена</th>
+                                    <th class="text-center">Наличие</th>
+                                    <th class="text-center">Доставка</th>
+                                    <th class="text-center">Кратность</th>
+                                    <th class="text-end">Даты доставки</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in part.stocks %}
+                                <tr class="{% if stock.count > 0 %}stock-available{% else %}stock-unavailable{% endif %}">
+                                    <td>
+                                        <div class="fw-semibold">{{ stock.warehouse_description }}</div>
+                                        <small class="text-muted">ID: {{ stock.stock_id }}</small>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        {{ "%.2f"|format(stock.price) }} ₽
+                                    </td>
+                                    <td class="text-center">
+                                        {% if stock.count > 0 %}
+                                        <span class="badge badge-available">
+                                            {{ stock.count }} шт.
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-unavailable">
+                                            Нет в наличии
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {{ stock.delivery_days }} дн.
+                                    </td>
+                                    <td class="text-center">
+                                        {{ stock.multiplicity }}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if stock.delivery_start or stock.delivery_end %}
+                                        <small>
+                                            {% if stock.delivery_start %}
+                                            с {{ stock.delivery_start[:10] }}<br>
+                                            {% endif %}
+                                            {% if stock.delivery_end %}
+                                            до {{ stock.delivery_end[:10] }}
+                                            {% endif %}
+                                        </small>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Сводка -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Всего предложений:</span>
+                                        <strong>{{ part.stocks|length }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% set available_stocks = part.stocks|selectattr('count', 'gt', 0)|list %}
+                            {% if available_stocks %}
+                            {% set min_price = available_stocks|map(attribute='price')|min %}
+                            <div class="card bg-success text-white">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Минимальная цена:</span>
+                                        <strong>{{ "%.2f"|format(min_price) }} ₽</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="bi bi-question-circle display-4"></i>
+                            <h5 class="mt-3">Информация о наличии отсутствует</h5>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кнопки действий -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('search_parts') }}?q={{ search_query|urlencode }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Вернуться к результатам
+                        </a>
+                        
+                        <div>
+                            <a href="{{ url_for('create_report') }}" class="btn btn-primary">
+                                <i class="bi bi-file-earmark-text"></i> Создать новый акт
+                            </a>
+                            {% set available_stocks = part.stocks|selectattr('count', 'gt', 0)|list %}
+                            {% if available_stocks %}
+                            <button class="btn btn-success ms-2" 
+                                    onclick="addToReport('{{ part.brand }}', '{{ part.part_number }}', '{{ part.name }}')">
+                                <i class="bi bi-plus-lg"></i> Добавить в текущий акт
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addToReport(brand, partNumber, name) {
+    // Сохраняем данные в localStorage для использования в форме акта
+    const partData = {
+        brand: brand,
+        part_number: partNumber,
+        name: name,
+        added_at: new Date().toISOString()
+    };
+    
+    localStorage.setItem('lastSelectedPart', JSON.stringify(partData));
+    
+    // Показываем уведомление
+    const toastEl = document.getElementById('addToast');
+    if (toastEl) {
+        document.getElementById('toastMessage').textContent = 
+            `Запчасть "${brand} ${partNumber}" добавлена для использования в акте`;
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+    }
+    
+    // Предлагаем перейти к созданию акта
+    setTimeout(() => {
+        if (confirm('Перейти к созданию акта?')) {
+            window.location.href = "{{ url_for('create_report') }}";
+        }
+    }, 1000);
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем, есть ли сохраненная запчасть
+    const savedPart = localStorage.getItem('lastSelectedPart');
+    if (savedPart) {
+        console.log('Сохраненная запчасть:', JSON.parse(savedPart));
+    }
+});
+</script>
+{% endblock %}
